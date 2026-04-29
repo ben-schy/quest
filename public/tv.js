@@ -36,6 +36,7 @@
     lastSpoken = text;
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
     const audio = new Audio('/api/tts?text=' + encodeURIComponent(text));
+    audio.playbackRate = 1.25;
     currentAudio = audio;
     audio.onerror = (e) => console.error('[TTS] audio error', e);
     audio.play().catch(e => console.warn('[TTS] play blocked:', e.message));
@@ -122,6 +123,18 @@
   }
 
   let lastNarration = '';
+  function setResolution(items, players) {
+    const el = $('resolution-list');
+    if (!items || !items.length) { el.innerHTML = ''; el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    el.innerHTML = items.map(r => {
+      const p = players.find(pl => pl.id === r.playerId);
+      const icon = p ? classIcon(p.type) : '🎲';
+      const name = p ? escapeHtml(p.name) : '?';
+      return `<div class="resolution-item"><span class="res-icon">${icon}</span><span class="res-name">${name}</span><span class="res-text">${escapeHtml(r.result)}</span></div>`;
+    }).join('');
+  }
+
   function setNarration(text) {
     if (text === lastNarration) return;
     lastNarration = text;
@@ -148,6 +161,7 @@
       $('round-max').textContent = s.maxRounds;
       $('scene-title').textContent = s.currentTitle || '';
       $('processing').classList.toggle('hidden', !s.isProcessing);
+      setResolution(s.isProcessing ? [] : (s.currentResolution || []), s.players);
       setNarration(s.currentNarration || '');
       renderParty(s.players, s.pendingChoices || [], 'playing');
       renderWaiting(s);

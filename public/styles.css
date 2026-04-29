@@ -186,3 +186,14 @@ textarea { resize: vertical; }
 .watching-box { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px; margin-top: 12px; }
 .watching-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .watching-badge { background: var(--blue); color: #fff; font-size: 0.75em; padding: 3px 8px; border-radius: 4px; font-family: sans-serif; letter-spacing: 0.04em; text-transform: uppercase; }
+
+/* Resolution list (TV — above narration) */
+.resolution-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.resolution-list.hidden { display: none; }
+.resolution-item { display: flex; align-items: baseline; gap: 6px; font-size: clamp(0.78rem, 0.9vw, 0.95rem); line-height: 1.4; color: var(--ink-dim); }
+.res-icon { flex-shrink: 0; }
+.res-name { font-weight: bold; color: var(--gold); white-space: nowrap; flex-shrink: 0; }
+
+/* My result (phone — above narration) */
+.my-result { background: var(--panel-2); border-left: 3px solid var(--gold); padding: 8px 12px; border-radius: 0 6px 6px 0; font-size: 0.9em; color: var(--ink-dim); margin-bottom: 8px; line-height: 1.4; }
+.my-result.hidden { display: none; }

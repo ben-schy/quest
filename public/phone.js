@@ -307,6 +307,9 @@
       $('ph-round').textContent = state.round;
       $('ph-max').textContent = state.maxRounds;
       $('ph-scene-title').textContent = state.currentTitle || '';
+      const myResult = state.myResult || '';
+      $('ph-my-result').textContent = myResult;
+      $('ph-my-result').classList.toggle('hidden', !myResult || state.isProcessing);
       const narration = state.currentNarration || '';
       $('ph-narration').textContent = narration;
       $('ph-narration').classList.toggle('hidden', !narration);

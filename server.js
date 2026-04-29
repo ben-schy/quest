@@ -223,7 +223,10 @@ CRITICAL: Respond with VALID JSON ONLY — no markdown, no preamble, no trailing
 
 {
   "title": "short scene title (3-6 words) — or adventure name if isFinal",
-  "narration": "seamless prose displayed on TV — resolve what just happened then flow into the new situation. 3-5 sentences, 55-75 words. Be vivid and specific about enemies, wounds, and outcomes.",
+  "resolution": [
+    { "playerId": "<id>", "result": "one crisp sentence ≤15 words: what they did and what happened" }
+  ],
+  "narration": "flowing prose — the new scene after the dust settles. 3-4 sentences, 50-65 words. Do NOT re-describe each player's action (that's in resolution); instead open with the consequence and move into the next situation.",
   "playerOptions": [
     { "playerId": "<id>", "options": ["...", "...", "..."] }
   ],
@@ -234,6 +237,7 @@ CRITICAL: Respond with VALID JSON ONLY — no markdown, no preamble, no trailing
 }
 
 Rules:
+- resolution: one entry per player who had options last round. Skip on the opening round (set to []). Skip when isFinal=true (set to []).
 - Always include EVERY active (HP > 0, not waitingForNext) player in playerOptions, unless isFinal=true.
 - If a player drops to 0 HP, narrate it and exclude them from further playerOptions.
 - stateUpdates only lists players whose state actually changes. Empty list is fine.
@@ -498,7 +502,8 @@ async function runClaude({ isOpening, isFinalResolution, actions }) {
     applyStateUpdates(result.stateUpdates || []);
     game.currentTitle = result.title || '';
     game.currentNarration = result.narration || '';
-    console.log(`[Game]   ← scene "${game.currentTitle}"  narration_words=${(game.currentNarration.split(/\s+/).length)}`);
+    game.currentResolution = result.resolution || [];
+    console.log(`[Game]   ← scene "${game.currentTitle}"  narration_words=${(game.currentNarration.split(/\s+/).length)}  resolution_entries=${game.currentResolution.length}`);
 
     game.history.push({
       round: game.round,
