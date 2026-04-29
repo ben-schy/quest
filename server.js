@@ -114,9 +114,11 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/', (_req, res) => res.redirect('/tv'));
 app.get('/tv', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'tv.html')));
+app.get('/phone', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.get('/qr', async (_req, res) => {
-  const url = `${getPublicUrl()}/`;
+  const url = `${getPublicUrl()}/phone`;
   const png = await QRCode.toDataURL(url, { margin: 1, scale: 10 });
   res.json({ url, png });
 });
@@ -757,6 +759,6 @@ io.on('connection', (socket) => {
 server.listen(PORT, '0.0.0.0', () => {
   const publicUrl = getPublicUrl();
   console.log(`\n  TV view:    ${publicUrl}/tv`);
-  console.log(`  Phone join: ${publicUrl}/`);
+  console.log(`  Phone join: ${publicUrl}/phone`);
   console.log(`  (or scan the QR code shown on the TV view)\n`);
 });
