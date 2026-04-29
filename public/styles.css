@@ -193,6 +193,8 @@ textarea { resize: vertical; }
 .resolution-item { display: flex; align-items: baseline; gap: 6px; font-size: clamp(0.78rem, 0.9vw, 0.95rem); line-height: 1.4; color: var(--ink-dim); }
 .res-icon { flex-shrink: 0; }
 .res-name { font-weight: bold; color: var(--gold); white-space: nowrap; flex-shrink: 0; }
+.res-action { font-style: italic; color: var(--ink-dim); }
+.res-arrow { color: var(--muted); margin: 0 2px; }
 
 /* My result (phone — above narration) */
 .my-result { background: var(--panel-2); border-left: 3px solid var(--gold); padding: 8px 12px; border-radius: 0 6px 6px 0; font-size: 0.9em; color: var(--ink-dim); margin-bottom: 8px; line-height: 1.4; }

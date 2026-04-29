@@ -148,7 +148,7 @@ app.get('/api/tts', async (req, res) => {
         Authorization: `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ model: 'tts-1', input: text, voice: OPENAI_TTS_VOICE, speed: 1.3 }),
+      body: JSON.stringify({ model: 'tts-1', input: text, voice: OPENAI_TTS_VOICE, speed: 1.2 }),
     });
     if (!resp.ok) {
       const body = await resp.text();
@@ -502,7 +502,11 @@ async function runClaude({ isOpening, isFinalResolution, actions }) {
     applyStateUpdates(result.stateUpdates || []);
     game.currentTitle = result.title || '';
     game.currentNarration = result.narration || '';
-    game.currentResolution = result.resolution || [];
+    // Merge chosen action text into each resolution entry so TV can show action → result
+    game.currentResolution = (result.resolution || []).map(r => {
+      const act = (actions || []).find(a => a.playerId === r.playerId);
+      return { playerId: r.playerId, action: act ? act.optionText : null, result: r.result };
+    });
     console.log(`[Game]   ← scene "${game.currentTitle}"  narration_words=${(game.currentNarration.split(/\s+/).length)}  resolution_entries=${game.currentResolution.length}`);
 
     game.history.push({

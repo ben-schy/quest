@@ -131,7 +131,8 @@
       const p = players.find(pl => pl.id === r.playerId);
       const icon = p ? classIcon(p.type) : '🎲';
       const name = p ? escapeHtml(p.name) : '?';
-      return `<div class="resolution-item"><span class="res-icon">${icon}</span><span class="res-name">${name}</span><span class="res-text">${escapeHtml(r.result)}</span></div>`;
+      const action = r.action ? `<span class="res-action">"${escapeHtml(r.action)}"</span><span class="res-arrow"> → </span>` : '';
+      return `<div class="resolution-item"><span class="res-icon">${icon}</span><span class="res-name">${name}</span>${action}<span class="res-text">${escapeHtml(r.result)}</span></div>`;
     }).join('');
   }
 
