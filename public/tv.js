@@ -36,7 +36,7 @@
     lastSpoken = text;
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
     const audio = new Audio('/api/tts?text=' + encodeURIComponent(text));
-    audio.playbackRate = 1.25;
+    audio.playbackRate = 1.0;
     currentAudio = audio;
     audio.onerror = (e) => console.error('[TTS] audio error', e);
     audio.play().catch(e => console.warn('[TTS] play blocked:', e.message));

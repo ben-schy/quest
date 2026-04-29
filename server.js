@@ -21,7 +21,7 @@ const {
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const MODEL = 'claude-sonnet-4-6';
-const OPENAI_TTS_VOICE = process.env.TTS_VOICE || 'onyx';
+const OPENAI_TTS_VOICE = process.env.TTS_VOICE || 'fable';
 
 function loadApiKey() {
   if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY.trim();
@@ -148,7 +148,7 @@ app.get('/api/tts', async (req, res) => {
         Authorization: `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ model: 'tts-1', input: text, voice: OPENAI_TTS_VOICE }),
+      body: JSON.stringify({ model: 'tts-1', input: text, voice: OPENAI_TTS_VOICE, speed: 1.3 }),
     });
     if (!resp.ok) {
       const body = await resp.text();
