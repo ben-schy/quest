@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Adventure</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="phone">
+  <div id="app">
+    <!-- Reconnecting -->
+    <section id="screen-reconnecting" class="screen hidden">
+      <h1 class="title">Adventure</h1>
+      <div class="reconnecting-box">
+        <span class="spinner"></span> Reconnecting…
+      </div>
+    </section>
+
+    <!-- Join -->
+    <section id="screen-join" class="screen hidden">
+      <h1 class="title">Adventure</h1>
+      <p class="subtitle">Enter your name to join the party</p>
+      <form id="join-form" autocomplete="off">
+        <input id="name-input" type="text" maxlength="24" placeholder="Your name" required>
+        <button class="primary" type="submit">Join</button>
+      </form>
+      <div class="error" id="join-error"></div>
+    </section>
+
+    <!-- Character Pick -->
+    <section id="screen-class" class="screen hidden">
+      <h2 class="title">Choose your class</h2>
+      <p class="subtitle" id="hello-line"></p>
+      <div id="class-grid" class="class-grid"></div>
+    </section>
+
+    <!-- Lobby -->
+    <section id="screen-lobby-phone" class="screen hidden">
+      <h2 class="title">Lobby</h2>
+      <div id="self-card" class="self-card"></div>
+
+      <div id="admin-controls" class="admin-controls hidden">
+        <h3>Admin Controls</h3>
+        <label>Campaign theme (optional)</label>
+        <textarea id="campaign-prompt" rows="3" placeholder="e.g. A heist in a haunted opera house. Stakes: stolen royal jewels."></textarea>
+        <label style="margin-top:10px;">Number of rounds</label>
+        <select id="max-rounds" style="background:var(--panel-2);color:var(--ink);border:1px solid var(--border);border-radius:6px;padding:10px;font-family:inherit;font-size:1em;width:100%;">
+          <option value="3">3 rounds (quick)</option>
+          <option value="5" selected>5 rounds (standard)</option>
+          <option value="7">7 rounds (epic)</option>
+          <option value="10">10 rounds (saga)</option>
+        </select>
+        <div class="admin-buttons">
+          <button id="add-bot" class="secondary" type="button">+ Add Bot</button>
+          <button id="start-game" class="primary" type="button">Start Adventure</button>
+        </div>
+      </div>
+
+      <h3 class="section-title">Party</h3>
+      <div id="lobby-roster" class="lobby-roster"></div>
+
+      <div class="hint" id="lobby-status"></div>
+    </section>
+
+    <!-- Playing -->
+    <section id="screen-play-phone" class="screen hidden">
+      <header class="phone-play-header">
+        <div class="round-pill">Round <span id="ph-round">1</span>/<span id="ph-max">5</span></div>
+        <div class="self-status" id="self-status"></div>
+      </header>
+      <div class="scene-title-phone" id="ph-scene-title"></div>
+      <div id="ph-narration" class="ph-narration hidden"></div>
+      <div id="ph-options" class="options"></div>
+      <div id="ph-waiting" class="waiting hidden"></div>
+      <div id="ph-processing" class="processing hidden"><span class="spinner"></span> The Storyteller is thinking…</div>
+
+      <div id="ph-admin-mid" class="admin-mid hidden">
+        <button id="kick-toggle" class="ghost" type="button">Manage party…</button>
+        <div id="kick-panel" class="kick-panel hidden"></div>
+        <button id="tts-admin-btn" class="ghost" type="button" style="margin-top:8px;">🔊 Narration: On</button>
+      </div>
+    </section>
+
+    <!-- Watching (mid-game joiner) -->
+    <section id="screen-watching" class="screen hidden">
+      <div class="watching-box">
+        <div class="watching-header">
+          <span class="round-pill">Round <span id="watching-round">1</span>/<span id="watching-max">5</span></span>
+          <span class="watching-badge">Joining next adventure</span>
+        </div>
+        <div class="scene-title-phone" id="watching-title"></div>
+        <div id="watching-narration" class="ph-narration hidden"></div>
+        <div class="hint" style="margin-top:16px;">The adventure is underway. You'll join when it's over — sit tight!</div>
+      </div>
+    </section>
+
+    <!-- Finished -->
+    <section id="screen-end-phone" class="screen hidden">
+      <h2 class="title" id="ph-final-title">The End</h2>
+      <div class="final-narration-phone" id="ph-final-narration"></div>
+      <div id="ph-self-final"></div>
+      <div id="ph-admin-end" class="hidden">
+        <button id="reset-game" class="primary" type="button">New Adventure (same party)</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/phone.js"></script>
+</body>
+</html>

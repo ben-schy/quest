@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Adventure — TV</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="tv">
+  <!-- Audio unlock overlay: Chrome blocks autoplay until first user gesture -->
+  <div id="audio-unlock" style="position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:rgba(14,16,20,0.92);cursor:pointer;">
+    <div style="text-align:center;color:#d6b25a;font-family:Georgia,serif;">
+      <div style="font-size:3em;">🔊</div>
+      <div style="font-size:1.6em;margin-top:12px;">Click anywhere to enable audio</div>
+    </div>
+  </div>
+  <div id="app">
+    <!-- Lobby -->
+    <section id="screen-lobby" class="screen">
+      <div class="lobby-grid">
+        <div class="lobby-left">
+          <h1 class="title">Choose Your Adventure</h1>
+          <p class="subtitle">Scan to join the party</p>
+          <div class="qr-wrap">
+            <img id="qr-img" alt="">
+          </div>
+          <div class="join-url" id="join-url"></div>
+        </div>
+        <div class="lobby-right">
+          <h2 class="section-title">The Party <span class="muted" id="lobby-count"></span></h2>
+          <div id="lobby-players" class="lobby-players"></div>
+          <div class="hint" id="lobby-hint">Waiting for an admin to start…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Playing -->
+    <section id="screen-play" class="screen hidden">
+      <header class="play-header">
+        <div class="round-pill"><span id="round-num">1</span> / <span id="round-max">5</span></div>
+        <div class="scene-title" id="scene-title"></div>
+        <div class="processing hidden" id="processing"><span class="spinner"></span> The Storyteller is thinking…</div>
+        <button class="tts-btn" id="tts-toggle" title="Toggle narration voice">🔊</button>
+      </header>
+      <main class="play-main">
+        <div class="narration-box">
+          <div class="narration" id="narration"></div>
+        </div>
+        <aside class="party-panel">
+          <h3>The Party</h3>
+          <div id="party-list"></div>
+        </aside>
+      </main>
+      <footer class="play-footer">
+        <div class="waiting-row" id="waiting-row"></div>
+      </footer>
+    </section>
+
+    <!-- Finished -->
+    <section id="screen-end" class="screen hidden">
+      <h1 class="title" id="final-title">The End</h1>
+      <div class="final-narration" id="final-narration"></div>
+      <div class="final-party" id="final-party"></div>
+    </section>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/tv.js"></script>
+</body>
+</html>
