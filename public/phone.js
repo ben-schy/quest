@@ -16,10 +16,14 @@
   }
 
   const CLASS_DEFS = [
-    { type: 'Warrior', icon: '⚔️', blurb: 'Strong melee fighter. Best at direct combat and feats of strength.' },
-    { type: 'Mage',    icon: '🔮', blurb: 'Wielder of arcane spells. Strong magic, fragile body.' },
-    { type: 'Rogue',   icon: '🗡️', blurb: 'Quick and cunning. Stealth, traps, surprise attacks.' },
-    { type: 'Cleric',  icon: '✨', blurb: 'Devoted healer. Channels divine power to mend and protect.' },
+    { type: 'Warrior',   icon: '⚔️',  blurb: 'Strong melee fighter. Best at direct combat and feats of strength.' },
+    { type: 'Mage',      icon: '🔮',  blurb: 'Wielder of arcane spells. Strong magic, fragile body.' },
+    { type: 'Rogue',     icon: '🗡️',  blurb: 'Quick and cunning. Stealth, traps, surprise attacks.' },
+    { type: 'Cleric',    icon: '✨',  blurb: 'Devoted healer. Channels divine power to mend and protect.' },
+    { type: 'Nerd',      icon: '🤓',  blurb: 'Master of knowledge and gadgetry. Devastating intellect, terrible in a fistfight.' },
+    { type: 'Dinosaur',  icon: '🦖',  blurb: 'Ancient and unstoppable. Enormous strength, limited finesse.' },
+    { type: 'Gym Coach', icon: '💪',  blurb: 'Peak physical condition. Hits hard, never quits, and has a speech for every occasion.' },
+    { type: 'Mom',       icon: '👩',  blurb: 'Resourceful and terrifying when provoked. Unmatched charisma and a purse full of surprises.' },
   ];
   function classIcon(t) { return (CLASS_DEFS.find(c => c.type === t) || {}).icon || '🎲'; }
 

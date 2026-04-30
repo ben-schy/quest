@@ -49,7 +49,7 @@
   });
 
   function classIcon(type) {
-    return ({ Warrior: '⚔️', Mage: '🔮', Rogue: '🗡️', Cleric: '✨' }[type] || '🎲');
+    return ({ Warrior: '⚔️', Mage: '🔮', Rogue: '🗡️', Cleric: '✨', Nerd: '🤓', Dinosaur: '🦖', 'Gym Coach': '💪', Mom: '👩' }[type] || '🎲');
   }
 
   function renderLobbyPlayers(players) {
