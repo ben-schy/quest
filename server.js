@@ -167,6 +167,17 @@ app.get('/api/tts', async (req, res) => {
   }
 });
 
+// --- Admin helpers ----------------------------------------------------------
+
+// Priority: named admins (ben/fertz) first, then first joined human player.
+function reassignAdmin() {
+  const humans = [...game.players.values()].filter(p => !p.isBot);
+  for (const p of humans) p.isAdmin = false;
+  if (!humans.length) return;
+  const named = humans.find(p => isAdminName(p.name));
+  (named || humans[0]).isAdmin = true;
+}
+
 // --- Broadcast --------------------------------------------------------------
 
 function broadcast() {
@@ -615,6 +626,7 @@ io.on('connection', (socket) => {
         existing.connected = true;
         socket.data.playerId = existing.id;
         clearAutoPickForPlayer(existing.id);
+        reassignAdmin();
         socket.emit('joined', { playerId: existing.id, token, isAdmin: existing.isAdmin });
         socket.emit('state', snapshotForPlayer(existing.id));
         broadcast();
@@ -641,7 +653,7 @@ io.on('connection', (socket) => {
       id,
       name: trimmed,
       socketId: socket.id,
-      isAdmin: isAdminName(trimmed),
+      isAdmin: false,
       isBot: false,
       connected: true,
       ready: false,
@@ -652,6 +664,7 @@ io.on('connection', (socket) => {
     game.players.set(id, player);
     tokens.set(tok, id);
     socket.data.playerId = id;
+    reassignAdmin();
     socket.emit('joined', { playerId: id, token: tok, isAdmin: player.isAdmin });
     socket.emit('state', snapshotForPlayer(id));
     broadcast();
@@ -729,6 +742,7 @@ io.on('connection', (socket) => {
     game.players.delete(playerId);
     game.options.delete(playerId);
     game.choices.delete(playerId);
+    reassignAdmin();
     broadcast();
     if (game.phase === 'playing') maybeResolveRound();
   });
@@ -780,6 +794,7 @@ io.on('connection', (socket) => {
         scheduleAutoPickForPlayer(id);
       }
     }
+    reassignAdmin();
     broadcast();
   });
 });
