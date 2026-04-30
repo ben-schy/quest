@@ -201,11 +201,11 @@ Drop the party into concrete, specific situations every round:
 
 ═══ NARRATION (single flowing block) ═══
 After each non-opening round, write ONE unified narrative paragraph that does ALL of the following in order:
-  1. Name each player and describe what they specifically attempted
-  2. Resolve what happened to each of them — hits, misses, consequences, enemy reactions
+  1. Name each player and briefly describe what they attempted
+  2. Resolve what happened — hits, misses, key consequences
   3. Transition into the resulting new scene
-Do NOT write separate summaries or bullet points. Weave it all into flowing prose. Example style: "Aldric charged the goblin leader and drove it into the wall — but the flankers got through, slashing him for 9 damage. Lyralei's fire bolt caught one archer square in the chest while the other dove behind the barrels. As the smoke cleared, the party found themselves cornered in the storeroom with the wounded troll still blocking the stairs…"
-Target 5-7 sentences, 80-110 words. Be specific about names, wounds, items used, and outcomes.
+Do NOT write separate summaries or bullet points. Weave it all into flowing prose. Example style: "Aldric charged the goblin leader and drove it into the wall — but the flankers got through, slashing him for 9 damage. Lyralei's fire bolt caught one archer square in the chest. The party now finds themselves cornered, the wounded troll still blocking the stairs…"
+Target 3-4 sentences, 50-70 words. Be specific about names and outcomes but keep it punchy.
 
 ═══ DANGER ═══
 This adventure should be genuinely dangerous. Players WILL sometimes die.
