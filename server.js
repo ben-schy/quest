@@ -362,8 +362,6 @@ ${players}`;
 
 async function callClaude(userPrompt) {
   console.log(`[Claude] → request  round=${game.round} phase=${game.phase} prompt_len=${userPrompt.length}`);
-  const entry = `\n${'='.repeat(80)}\n[${new Date().toISOString()}]  round=${game.round}  phase=${game.phase}\n${'='.repeat(80)}\n${userPrompt}\n`;
-  fs.appendFile(path.join(__dirname, 'claude_queries.log'), entry, err => { if (err) console.warn('[Log] write failed:', err.message); });
   const t0 = Date.now();
   const response = await anthropic.messages.create({
     model: MODEL,
@@ -378,7 +376,10 @@ async function callClaude(userPrompt) {
   const block = response.content.find(b => b.type === 'text');
   let text = block ? block.text.trim() : '';
   const usage = response.usage || {};
-  console.log(`[Claude] ← response ${Date.now() - t0}ms  in=${usage.input_tokens} out=${usage.output_tokens} cache_read=${usage.cache_read_input_tokens ?? 0}`);
+  const elapsed = Date.now() - t0;
+  console.log(`[Claude] ← response ${elapsed}ms  in=${usage.input_tokens} out=${usage.output_tokens} cache_read=${usage.cache_read_input_tokens ?? 0}`);
+  const entry = `\n${'='.repeat(80)}\n[${new Date().toISOString()}]  round=${game.round}  phase=${game.phase}  ${elapsed}ms\n${'='.repeat(80)}\n--- PROMPT ---\n${userPrompt}\n--- RESPONSE ---\n${text}\n`;
+  fs.appendFile(path.join(__dirname, 'claude_queries.log'), entry, err => { if (err) console.warn('[Log] write failed:', err.message); });
   text = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
   try {
     return JSON.parse(text);
