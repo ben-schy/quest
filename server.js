@@ -240,7 +240,7 @@ Rules:
 - stateUpdates only lists players whose state changes. Empty list is fine.
 - Use exact playerId strings from the input.
 - isFinal=true only for the final wrap-up; omit playerOptions then.`;
-`;
+
 
 function describePlayers() {
   return [...game.players.values()].filter(p => p.ready && !p.waitingForNext).map(p => {
