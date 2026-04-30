@@ -354,6 +354,8 @@ ${players}`;
 
 async function callClaude(userPrompt) {
   console.log(`[Claude] → request  round=${game.round} phase=${game.phase} prompt_len=${userPrompt.length}`);
+  const entry = `\n${'='.repeat(80)}\n[${new Date().toISOString()}]  round=${game.round}  phase=${game.phase}\n${'='.repeat(80)}\n${userPrompt}\n`;
+  fs.appendFile(path.join(__dirname, 'claude_queries.log'), entry, err => { if (err) console.warn('[Log] write failed:', err.message); });
   const t0 = Date.now();
   const response = await anthropic.messages.create({
     model: MODEL,

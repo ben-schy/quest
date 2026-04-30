@@ -4,5 +4,6 @@ node_modules/
 api_key.txt
 anthropic.key
 quest_history.json
+claude_queries.log
 *.log
 .DS_Store
