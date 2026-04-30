@@ -35,7 +35,11 @@
     </section>
 
     <!-- Playing -->
-    <section id="screen-play" class="screen hidden">
+    <section id="screen-play" class="screen hidden" style="position:relative;">
+      <div id="processing-overlay" class="processing-overlay hidden">
+        <span class="big-spinner"></span>
+        <div class="processing-label">The Storyteller is thinking…</div>
+      </div>
       <header class="play-header">
         <div class="round-pill"><span id="round-num">1</span> / <span id="round-max">5</span></div>
         <div class="scene-title" id="scene-title"></div>
@@ -44,7 +48,6 @@
       </header>
       <main class="play-main">
         <div class="narration-box">
-          <div id="resolution-list" class="resolution-list"></div>
           <div class="narration" id="narration"></div>
         </div>
         <aside class="party-panel">

@@ -123,19 +123,6 @@
   }
 
   let lastNarration = '';
-  function setResolution(items, players) {
-    const el = $('resolution-list');
-    if (!items || !items.length) { el.innerHTML = ''; el.classList.add('hidden'); return; }
-    el.classList.remove('hidden');
-    el.innerHTML = items.map(r => {
-      const p = players.find(pl => pl.id === r.playerId);
-      const icon = p ? classIcon(p.type) : '🎲';
-      const name = p ? escapeHtml(p.name) : '?';
-      const action = r.action ? `<span class="res-action">"${escapeHtml(r.action)}"</span><span class="res-arrow"> → </span>` : '';
-      return `<div class="resolution-item"><span class="res-icon">${icon}</span><span class="res-name">${name}</span>${action}<span class="res-text">${escapeHtml(r.result)}</span></div>`;
-    }).join('');
-  }
-
   function setNarration(text) {
     if (text === lastNarration) return;
     lastNarration = text;
@@ -162,7 +149,7 @@
       $('round-max').textContent = s.maxRounds;
       $('scene-title').textContent = s.currentTitle || '';
       $('processing').classList.toggle('hidden', !s.isProcessing);
-      setResolution(s.isProcessing ? [] : (s.currentResolution || []), s.players);
+      $('processing-overlay').classList.toggle('hidden', !s.isProcessing);
       setNarration(s.currentNarration || '');
       renderParty(s.players, s.pendingChoices || [], 'playing');
       renderWaiting(s);

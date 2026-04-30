@@ -13,7 +13,7 @@ const {
   CHARACTERS,
   game, tokens,
   newId, newToken,
-  rollCharacter, pickBotName,
+  rollCharacter, pickBotName, pickFromPool, randomItems,
   publicPlayer, activeChoosers, snapshotForPlayer, snapshotForTV,
   applyStateUpdates, resetGameState,
   isAdminName, findPlayerBySocket, findPlayerByToken,
@@ -180,53 +180,51 @@ function broadcast() {
 
 // --- Claude integration -----------------------------------------------------
 
-const SYSTEM_PROMPT = `You are the Game Master for a multiplayer party choose-your-own-adventure shown on a TV, with players choosing actions on their phones. Your job is to run a TACTICAL, ENCOUNTER-DRIVEN adventure where combat has real weight, items matter, and every choice has consequences.
+const SYSTEM_PROMPT = `You are the Game Master for a multiplayer party choose-your-own-adventure shown on a TV, with players choosing actions on their phones. Run a TACTICAL, DANGEROUS adventure where combat has real weight, death is possible, and items matter.
 
 ═══ ENCOUNTER DESIGN ═══
-Drop the party into concrete, specific situations every round. Not "you find trouble" — describe the exact scene:
-  • How many enemies, what type, where they are positioned, what they're doing
-  • "Four skeleton archers line the balcony above; a shambling troll blocks the exit, mid-swing at Aldric"
-  • "Two goblins crouch behind overturned tables with crossbows trained on the door; three more charge blade-first from the left flank"
-Vary encounter types: ambushes, boss fights, trapped rooms, hostage situations, social confrontations, environmental hazards. Combat is the spine, but not every round is pure sword-swinging.
+Drop the party into concrete, specific situations every round:
+  • Name and count enemies precisely. Describe their positions and what makes them dangerous.
+  • "Four skeleton archers on the balcony; a troll blocks the only exit, already mid-swing at Aldric"
+  • Vary encounters: ambushes, boss fights, trapped rooms, social confrontations, environmental hazards.
+
+═══ NARRATION (single flowing block) ═══
+After each non-opening round, write ONE unified narrative paragraph that does ALL of the following in order:
+  1. Name each player and describe what they specifically attempted
+  2. Resolve what happened to each of them — hits, misses, consequences, enemy reactions
+  3. Transition into the resulting new scene
+Do NOT write separate summaries or bullet points. Weave it all into flowing prose. Example style: "Aldric charged the goblin leader and drove it into the wall — but the flankers got through, slashing him for 9 damage. Lyralei's fire bolt caught one archer square in the chest while the other dove behind the barrels. As the smoke cleared, the party found themselves cornered in the storeroom with the wounded troll still blocking the stairs…"
+Target 5-7 sentences, 80-110 words. Be specific about names, wounds, items used, and outcomes.
+
+═══ DANGER ═══
+This adventure should be genuinely dangerous. Players WILL sometimes die.
+  • Apply aggressive HP deltas. A warrior taking two hits: -10 to -18 HP. A mage in melee: -12 to -20. Low DEX characters get hit more. High STR hits harder.
+  • Enemies retaliate hard. If the party doesn't neutralise a threat, it attacks. Multiple enemies means multiple damage sources.
+  • Aim for at least one player in the red (below 30% HP) by round 2. Death before the final round is narratively interesting — embrace it.
+  • When a player dies, give it weight: a line in the narration honoring how they fell.
+  • Status effects compound: "poisoned" = -4 HP per round until cured. "burning" = -5. Track these.
+
+═══ ITEMS ═══
+  • Players start with 2 chosen items — reference them. An unused Healing Potion while bleeding is a choice.
+  • Items are consumable (track via itemsRemoved when used): Healing Potion (+10 to +14 HP), Smoke Bomb (enemies lose their next attack), Protein Shake (+6 HP + STR boost for one round).
+  • Award loot after significant encounters: a defeated enemy drops something useful, a room has a chest. Interesting items only — not "gold coins". Add via itemsAdded.
 
 ═══ PLAYER OPTIONS ═══
-Options must reflect the actual tactical situation — not generic, not vague:
-  • Target SPECIFIC enemies or positions: "Rush the flanking goblins before they close", "Blast the archers on the balcony"
-  • Use the environment: "Kick over the brazier to cut off their retreat", "Swing from the chandelier to reach the balcony"
-  • Coordinate: "Draw their fire so the Rogue can flank"
-  • Use items: if a player has a Smoke Bomb, Healing Potion, or other usable item, offer it as an option when relevant
-  • Class-flavored always:
-    - Warrior: charges, shield bashes, holds the line, taunts enemies off allies
-    - Mage: targeted spells, area blasts, hexes, utility magic (light, silence, slow)
-    - Rogue: flanks, vanishes into shadows, sets traps, pickpockets, backstabs, throws smoke
-    - Cleric: heals allies mid-fight, channels divine wrath, wards against undead, buffs
-Give 3-4 options per player, meaningfully different in risk and approach.
+  • Tactical and specific: target a named enemy, use the environment, use an item, coordinate.
+  • Class-flavored: Warrior charges/shields/taunts; Mage blasts/hexes/utilities; Rogue flanks/vanishes/throws; Cleric heals/smites/buffs; Nerd hacks/analyzes/gadgets; Dinosaur stomps/bites/roars; Gym Coach motivates/grapples/endures; Mom scolds/resourcefully improvises/protects.
+  • 3-4 options per player, meaningfully different in risk and approach. Under ~12 words each.
 
-═══ COMBAT RESOLUTION ═══
-Resolve the full fight state before advancing. Name what happened to each enemy:
-  • Apply real HP deltas. Warrior tanking two sword strikes: -6 to -12 HP. Mage caught in melee: -8 to -15. A Rogue who successfully flanked: 0 to -3. High DEX = more dodges; high STR = harder hits; high INT = spells land; high CHA = enemies hesitate.
-  • Enemies retaliate unless stopped or dead. A goblin whose ally just fell might break and run — or fight with rage.
-  • Partial successes are the most interesting: goblins driven back BUT the Cleric took a bolt.
-  • Status effects via statusNote: "poisoned" (-3 HP applied next round and noted), "burning", "stunned", "blessed", "limping". Keep these short.
-  • Items are consumable power: Healing Potion = +8 to +12 hpDelta. Smoke Bomb = tactical advantage / enemies lose a turn. Track items used via itemsRemoved.
-
-═══ STORY PACING ═══
-  • Opening round: a vivid hook with an immediate threat requiring choice.
-  • Mid rounds: escalate. Tougher enemies, higher stakes, choices from earlier rounds echoing forward.
-  • Final round: a boss, a desperate last stand, or a dramatic escape. isFinal=true wraps everything up.
-  • Final narration (isFinal=true): 4-6 sentences. Name every surviving hero. Honor the fallen. Give the adventure a proper ending.
-
-═══ FINAL TITLE ═══
-When isFinal=true, the "title" field is the NAME OF THIS ADVENTURE — something a bard would title it. Memorable, specific, earned by what happened: "The Fall of Grimstone Keep", "Victory at a Terrible Price", "How the Goblin King Met His End", "Three Heroes and a Miracle". Never just "The End".
+═══ PACING ═══
+  • Opening: vivid hook with an immediate threat.
+  • Mid rounds: escalate. Tougher enemies, choices from earlier echoing forward.
+  • Final round: climactic boss or desperate last stand.
+  • isFinal=true wrap-up: 5-7 sentences, name every hero, honor the fallen, give the adventure a title worthy of a bard.
 
 CRITICAL: Respond with VALID JSON ONLY — no markdown, no preamble, no trailing text. Schema:
 
 {
-  "title": "short scene title (3-6 words) — or adventure name if isFinal",
-  "resolution": [
-    { "playerId": "<id>", "result": "one crisp sentence ≤15 words: what they did and what happened" }
-  ],
-  "narration": "flowing prose — the new scene after the dust settles. 3-4 sentences, 50-65 words. Do NOT re-describe each player's action (that's in resolution); instead open with the consequence and move into the next situation.",
+  "title": "short scene title (3-6 words) — or memorable adventure name if isFinal",
+  "narration": "single flowing paragraph as described above",
   "playerOptions": [
     { "playerId": "<id>", "options": ["...", "...", "..."] }
   ],
@@ -237,13 +235,12 @@ CRITICAL: Respond with VALID JSON ONLY — no markdown, no preamble, no trailing
 }
 
 Rules:
-- resolution: one entry per player who had options last round. Skip on the opening round (set to []). Skip when isFinal=true (set to []).
 - Always include EVERY active (HP > 0, not waitingForNext) player in playerOptions, unless isFinal=true.
-- If a player drops to 0 HP, narrate it and exclude them from further playerOptions.
-- stateUpdates only lists players whose state actually changes. Empty list is fine.
+- If a player drops to 0 HP, narrate their death and exclude them from further playerOptions.
+- stateUpdates only lists players whose state changes. Empty list is fine.
 - Use exact playerId strings from the input.
-- isFinal=true only for the closing wrap-up after the last round; omit playerOptions then.
-- Options: under ~12 words each, specific enough to visualise.`;
+- isFinal=true only for the final wrap-up; omit playerOptions then.`;
+`;
 
 function describePlayers() {
   return [...game.players.values()].filter(p => p.ready && !p.waitingForNext).map(p => {
@@ -504,12 +501,7 @@ async function runClaude({ isOpening, isFinalResolution, actions }) {
     applyStateUpdates(result.stateUpdates || []);
     game.currentTitle = result.title || '';
     game.currentNarration = result.narration || '';
-    // Merge chosen action text into each resolution entry so TV can show action → result
-    game.currentResolution = (result.resolution || []).map(r => {
-      const act = (actions || []).find(a => a.playerId === r.playerId);
-      return { playerId: r.playerId, action: act ? act.optionText : null, result: r.result };
-    });
-    console.log(`[Game]   ← scene "${game.currentTitle}"  narration_words=${(game.currentNarration.split(/\s+/).length)}  resolution_entries=${game.currentResolution.length}`);
+    console.log(`[Game]   ← scene "${game.currentTitle}"  narration_words=${(game.currentNarration.split(/\s+/).length)}`);
 
     game.history.push({
       round: game.round,
@@ -566,24 +558,35 @@ function resetToLobby() {
   clearBotTimers();
   clearAllAutoPickTimers();
 
-  // Carry items from surviving human players into the next adventure
+  // Before reset: capture survivors' items and note who died
   const survivorItems = new Map();
+  const diedIds = new Set();
   if (game.phase === 'finished') {
     for (const p of game.players.values()) {
-      if (!p.isBot && p.hp > 0 && p.items && p.items.length) {
+      if (p.isBot) continue;
+      if (p.hp > 0 && p.items && p.items.length) {
         survivorItems.set(p.id, [...p.items]);
+      } else if (p.hp <= 0) {
+        diedIds.add(p.id);
       }
     }
   }
 
   resetGameState();
 
-  // Restore carried items (replaces fresh starting gear)
+  // Apply item overrides after reset
   for (const [id, items] of survivorItems) {
     const p = game.players.get(id);
     if (p) {
       p.items = items;
       console.log(`[Game]   carrying ${items.length} item(s) for ${p.name}: ${items.join(', ')}`);
+    }
+  }
+  for (const id of diedIds) {
+    const p = game.players.get(id);
+    if (p) {
+      p.items = randomItems(2);
+      console.log(`[Game]   respawn items for ${p.name} (died): ${p.items.join(', ')}`);
     }
   }
 
@@ -660,7 +663,20 @@ io.on('connection', (socket) => {
     if (!player) return;
     if (!CHARACTERS[type]) return;
     if (player.ready) return;
-    Object.assign(player, rollCharacter(type), { ready: true });
+    // Assign class stats but NOT ready — player must still pick 2 items
+    Object.assign(player, rollCharacter(type));
+    broadcast();
+  });
+
+  socket.on('selectItems', ({ items } = {}) => {
+    const id = socket.data.playerId;
+    const player = id ? game.players.get(id) : null;
+    if (!player || player.ready || !player.type) return;
+    const pool = CHARACTERS[player.type]?.itemPool || [];
+    const chosen = (items || []).filter(it => pool.includes(it)).slice(0, 2);
+    if (chosen.length < 2) return;
+    player.items = chosen;
+    player.ready = true;
     broadcast();
   });
 
@@ -688,6 +704,7 @@ io.on('connection', (socket) => {
       connected: true,
       ready: true,
       ...rollCharacter(type),
+      items: pickFromPool(CHARACTERS[type].itemPool, 2),
     };
     game.players.set(bid, bot);
     broadcast();

@@ -6,6 +6,7 @@
     reconnecting: $('screen-reconnecting'),
     join: $('screen-join'),
     classPick: $('screen-class'),
+    itemPick: $('screen-items'),
     lobby: $('screen-lobby-phone'),
     play: $('screen-play-phone'),
     watching: $('screen-watching'),
@@ -32,6 +33,7 @@
   let lastState = null;
   let lastSelectedIdx = null;
   let isReconnecting = false;
+  let selectedItems = [];
 
   // --- Persistence helpers
   function saveSession(token, name) {
@@ -110,6 +112,38 @@
       grid.appendChild(card);
     }
   }
+
+  function renderItemPicker(state) {
+    const pool = state.itemPool || [];
+    const grid = $('item-grid');
+    grid.innerHTML = '';
+    for (const item of pool) {
+      const btn = document.createElement('button');
+      btn.className = 'item-btn' + (selectedItems.includes(item) ? ' selected' : '');
+      btn.type = 'button';
+      btn.textContent = item;
+      btn.addEventListener('click', () => {
+        const idx = selectedItems.indexOf(item);
+        if (idx >= 0) {
+          selectedItems.splice(idx, 1);
+          btn.classList.remove('selected');
+        } else if (selectedItems.length < 2) {
+          selectedItems.push(item);
+          btn.classList.add('selected');
+        }
+        $('confirm-items').disabled = selectedItems.length !== 2;
+      });
+      grid.appendChild(btn);
+    }
+    $('confirm-items').disabled = selectedItems.length !== 2;
+  }
+
+  $('confirm-items').addEventListener('click', () => {
+    if (selectedItems.length === 2) {
+      socket.emit('selectItems', { items: [...selectedItems] });
+      selectedItems = [];
+    }
+  });
 
   // --- Lobby
   function renderLobbyRoster(state) {
@@ -273,10 +307,16 @@
     updateTtsBtn(state.ttsEnabled !== false);
 
     if (state.waitingForNext) {
-      // Mid-game joiner: show class pick if not ready, else watching screen
+      // Mid-game joiner: show class/item pick if not ready, else watching screen
       if (!state.self || !state.self.ready) {
-        renderClassGrid();
-        show('classPick');
+        if (state.self && state.self.type && state.itemPool && state.itemPool.length) {
+          $('item-pick-title').textContent = `${classIcon(state.self.type)} — Choose your gear`;
+          renderItemPicker(state);
+          show('itemPick');
+        } else {
+          renderClassGrid();
+          show('classPick');
+        }
       } else {
         show('watching');
         $('watching-round').textContent = state.round;
@@ -292,8 +332,14 @@
     if (state.phase === 'lobby') {
       if (!state.self) { show('join'); return; }
       if (!state.self.ready) {
-        renderClassGrid();
-        show('classPick');
+        if (state.self.type && state.itemPool && state.itemPool.length) {
+          $('item-pick-title').textContent = `${classIcon(state.self.type)} — Choose your gear`;
+          renderItemPicker(state);
+          show('itemPick');
+        } else {
+          renderClassGrid();
+          show('classPick');
+        }
         return;
       }
       show('lobby');
