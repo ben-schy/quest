@@ -111,7 +111,7 @@ function getLocalIP() {
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const io = new Server(server, { cors: { origin: '*' }, pingTimeout: 60000, pingInterval: 25000 });
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (_req, res) => res.redirect('/tv'));
@@ -191,66 +191,47 @@ function broadcast() {
 
 // --- Claude integration -----------------------------------------------------
 
-const SYSTEM_PROMPT = `You are the Game Master for a multiplayer party choose-your-own-adventure shown on a TV, with players choosing actions on their phones. Run a TACTICAL, DANGEROUS adventure where combat has real weight, death is possible, and items matter.
+const SYSTEM_PROMPT_BASE = `You are the Game Master for a multiplayer party adventure displayed on a TV, with players choosing actions on their phones. Run a DANGEROUS adventure — choices carry real consequences and death is possible.
 
-═══ ENCOUNTER DESIGN ═══
-Drop the party into concrete, specific situations every round:
-  • Name and count enemies precisely. Describe their positions and what makes them dangerous.
-  • "Four skeleton archers on the balcony; a troll blocks the only exit, already mid-swing at Aldric"
-  • Vary encounters: ambushes, boss fights, trapped rooms, social confrontations, environmental hazards.
-
-═══ NARRATION (single flowing block) ═══
-After each non-opening round, write ONE unified narrative paragraph that does ALL of the following in order:
-  1. Name each player and briefly describe what they attempted
-  2. Resolve what happened — hits, misses, key consequences
-  3. Transition into the resulting new scene
-Do NOT write separate summaries or bullet points. Weave it all into flowing prose. Example style: "Aldric charged the goblin leader and drove it into the wall — but the flankers got through, slashing him for 9 damage. Lyralei's fire bolt caught one archer square in the chest. The party now finds themselves cornered, the wounded troll still blocking the stairs…"
-Target 3-4 sentences, 50-70 words. Be specific about names and outcomes but keep it punchy.
+═══ NARRATION ═══
+After each non-opening round, write ONE flowing paragraph: name each player and what they did, resolve outcomes (hits, misses, consequences), then transition to the next scene. 3-4 sentences, 50-70 words. Punchy and specific — names, numbers, results. No bullet points.
 
 ═══ DANGER ═══
-This adventure should be genuinely dangerous. Players WILL sometimes die.
-  • Apply aggressive HP deltas. A warrior taking two hits: -10 to -18 HP. A mage in melee: -12 to -20. Low DEX characters get hit more. High STR hits harder.
-  • Enemies retaliate hard. If the party doesn't neutralise a threat, it attacks. Multiple enemies means multiple damage sources.
-  • Aim for at least one player in the red (below 30% HP) by round 2. Death before the final round is narratively interesting — embrace it.
-  • When a player dies, give it weight: a line in the narration honoring how they fell.
-  • Status effects compound: "poisoned" = -4 HP per round until cured. "burning" = -5. Track these.
+Apply meaningful HP changes: a warrior hit takes 8-15 HP, a mage in melee 10-18 HP. Enemies retaliate if not stopped. Aim for at least one player below 30% HP by round 2. If a player dies, give it one sentence of honor.
+Status effects persist: poisoned = -4 HP/round, burning = -5 HP/round.
 
 ═══ ITEMS ═══
-  • Players start with 2 chosen items — reference them. An unused Healing Potion while bleeding is a choice.
-  • Items are consumable (track via itemsRemoved when used): Healing Potion (+10 to +14 HP), Smoke Bomb (enemies lose their next attack), Protein Shake (+6 HP + STR boost for one round).
-  • Award loot after significant encounters: a defeated enemy drops something useful, a room has a chest. Interesting items only — not "gold coins". Add via itemsAdded.
+Items are consumable — track via itemsRemoved: Healing Potion (+10-14 HP), Smoke Bomb (enemies skip next attack), Protein Shake (+6 HP + STR boost). Award interesting loot after meaningful encounters (not gold coins) via itemsAdded.
 
-═══ PLAYER OPTIONS ═══
-  • Tactical and specific: target a named enemy, use the environment, use an item, coordinate.
-  • Class-flavored: Warrior charges/shields/taunts; Mage blasts/hexes/utilities; Rogue flanks/vanishes/throws; Cleric heals/smites/buffs; Nerd hacks/analyzes/gadgets; Dinosaur stomps/bites/roars; Gym Coach motivates/grapples/endures; Mom scolds/resourcefully improvises/protects.
-  • 3-4 options per player, meaningfully different in risk and approach. Under ~12 words each.
+═══ OPTIONS ═══
+3-4 options per player, class-flavored and meaningfully different in risk. Under 12 words each.
+Warrior: charge/shield/taunt. Mage: blast/hex/utility. Rogue: flank/vanish/throw. Cleric: heal/smite/buff. Nerd: hack/analyze/gadget. Dinosaur: stomp/bite/roar. Gym Coach: motivate/grapple/endure. Mom: scold/improvise/protect.
 
-═══ PACING ═══
-  • Opening: vivid hook with an immediate threat.
-  • Mid rounds: escalate. Tougher enemies, choices from earlier echoing forward.
-  • Final round: climactic boss or desperate last stand.
-  • isFinal=true wrap-up: 5-7 sentences, name every hero, honor the fallen, give the adventure a title worthy of a bard.
+Final round (isFinal=true): 4-5 sentences naming every hero, honoring the fallen, with a title worthy of a bard.
 
-CRITICAL: Respond with VALID JSON ONLY — no markdown, no preamble, no trailing text. Schema:
+CRITICAL: Return VALID JSON ONLY — no markdown, no preamble.
 
 {
-  "title": "short scene title (3-6 words) — or memorable adventure name if isFinal",
-  "narration": "single flowing paragraph as described above",
-  "playerOptions": [
-    { "playerId": "<id>", "options": ["...", "...", "..."] }
-  ],
-  "stateUpdates": [
-    { "playerId": "<id>", "hpDelta": 0, "itemsAdded": [], "itemsRemoved": [], "statusNote": "" }
-  ],
+  "title": "short scene title (3-6 words)",
+  "narration": "single flowing paragraph",
+  "playerOptions": [{ "playerId": "<id>", "options": ["...", "...", "..."] }],
+  "stateUpdates": [{ "playerId": "<id>", "hpDelta": 0, "itemsAdded": [], "itemsRemoved": [], "statusNote": "" }],
   "isFinal": false
 }
 
-Rules:
-- Always include EVERY active (HP > 0, not waitingForNext) player in playerOptions, unless isFinal=true.
-- If a player drops to 0 HP, narrate their death and exclude them from further playerOptions.
-- stateUpdates only lists players whose state changes. Empty list is fine.
-- Use exact playerId strings from the input.
-- isFinal=true only for the final wrap-up; omit playerOptions then.`;
+Rules: include every active player (HP > 0, not waitingForNext) in playerOptions unless isFinal. Dead players are excluded from further options. stateUpdates only lists changed players. Use exact playerId strings.`;
+
+function buildSystemPrompt() {
+  const b = game.battleBalance ?? 50;
+  const adventure = 100 - b;
+  let balanceLine;
+  if (b >= 80) balanceLine = 'Tone: heavy combat focus. Most rounds should feature direct fighting and tactical threats.';
+  else if (b >= 60) balanceLine = 'Tone: mostly combat, with brief moments of exploration or story between fights.';
+  else if (b >= 40) balanceLine = 'Tone: balanced — mix combat with exploration, puzzles, discoveries, and story beats.';
+  else if (b >= 20) balanceLine = 'Tone: mostly adventure — exploration, mysteries, and story drive the action. Combat is occasional.';
+  else balanceLine = 'Tone: adventure-focused. Emphasize exploration, discoveries, and story. Combat is rare and surprising.';
+  return `${SYSTEM_PROMPT_BASE}\n\n${balanceLine}`;
+}
 
 
 function describePlayers() {
@@ -367,7 +348,7 @@ async function callClaude(userPrompt) {
     model: MODEL,
     max_tokens: 2000,
     system: [
-      { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+      { type: 'text', text: buildSystemPrompt(), cache_control: { type: 'ephemeral' } },
     ],
     messages: [
       { role: 'user', content: userPrompt },
@@ -396,6 +377,32 @@ async function callClaude(userPrompt) {
 // --- Auto-pick timers (for disconnected players) ----------------------------
 
 const autoPickTimers = new Map(); // playerId -> timeoutHandle
+
+// --- Lobby grace-period timers (15 min before removing a disconnected player) -
+const lobbyGraceTimers = new Map(); // playerId -> timeoutHandle
+const LOBBY_GRACE_MS = 15 * 60 * 1000;
+
+function clearLobbyGrace(id) {
+  const t = lobbyGraceTimers.get(id);
+  if (t) { clearTimeout(t); lobbyGraceTimers.delete(id); }
+}
+
+function scheduleLobbyGrace(id) {
+  clearLobbyGrace(id);
+  const handle = setTimeout(() => {
+    lobbyGraceTimers.delete(id);
+    const player = game.players.get(id);
+    if (!player) return;
+    for (const [tok, pid] of tokens.entries()) {
+      if (pid === id) { tokens.delete(tok); break; }
+    }
+    game.players.delete(id);
+    reassignAdmin();
+    broadcast();
+    console.log(`[Lobby]  grace expired, removed player ${id}`);
+  }, LOBBY_GRACE_MS);
+  lobbyGraceTimers.set(id, handle);
+}
 
 function clearAutoPickForPlayer(id) {
   const t = autoPickTimers.get(id);
@@ -627,6 +634,7 @@ io.on('connection', (socket) => {
         existing.connected = true;
         socket.data.playerId = existing.id;
         clearAutoPickForPlayer(existing.id);
+        clearLobbyGrace(existing.id);
         reassignAdmin();
         socket.emit('joined', { playerId: existing.id, token, isAdmin: existing.isAdmin });
         socket.emit('state', snapshotForPlayer(existing.id));
@@ -740,6 +748,7 @@ io.on('connection', (socket) => {
       if (pid === playerId) { tokens.delete(tok); break; }
     }
     clearAutoPickForPlayer(playerId);
+    clearLobbyGrace(playerId);
     game.players.delete(playerId);
     game.options.delete(playerId);
     game.choices.delete(playerId);
@@ -770,6 +779,17 @@ io.on('connection', (socket) => {
     broadcast();
   });
 
+  socket.on('setBattleBalance', ({ value } = {}) => {
+    const id = socket.data.playerId;
+    const player = id ? game.players.get(id) : null;
+    if (!player || !player.isAdmin) return;
+    const v = parseInt(value, 10);
+    if (isNaN(v) || v < 0 || v > 100) return;
+    game.battleBalance = Math.round(v / 10) * 10; // snap to 10% increments
+    console.log(`[Game]   admin set battleBalance=${game.battleBalance}`);
+    broadcast();
+  });
+
   socket.on('resetGame', () => {
     const id = socket.data.playerId;
     const player = id ? game.players.get(id) : null;
@@ -783,11 +803,10 @@ io.on('connection', (socket) => {
     const player = game.players.get(id);
     if (!player) return;
     if (game.phase === 'lobby' || player.waitingForNext) {
-      // Remove lobby/waiting players immediately; revoke token
-      for (const [tok, pid] of tokens.entries()) {
-        if (pid === id) { tokens.delete(tok); break; }
-      }
-      game.players.delete(id);
+      // Keep player (and token) for 15 min so they can reconnect; remove after grace period
+      player.connected = false;
+      player.socketId = null;
+      scheduleLobbyGrace(id);
     } else {
       player.connected = false;
       player.socketId = null;

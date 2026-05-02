@@ -292,6 +292,41 @@
     socket.emit('setTTS', { enabled: !ttsEnabled });
   });
 
+  // --- Battle/adventure balance slider (admin) ---
+  const BALANCE_LABELS = {
+    0: ['Pure Adventure', 'Exploration and story, almost no combat'],
+    10: ['Mostly Adventure', 'Heavy exploration with rare combat'],
+    20: ['Mostly Adventure', 'Exploration-driven with occasional fights'],
+    30: ['Adventure-leaning', 'More story than combat'],
+    40: ['Adventure-leaning', 'Slight lean toward exploration'],
+    50: ['Balanced', 'Equal mix of exploration and combat'],
+    60: ['Battle-leaning', 'Slight lean toward combat'],
+    70: ['Battle-leaning', 'More fights than story'],
+    80: ['Mostly Battle', 'Combat-heavy with brief story beats'],
+    90: ['Mostly Battle', 'Near-constant fighting'],
+    100: ['Pure Battle', 'Combat every round'],
+  };
+  function updateBalanceUI(value, labelId, hintId) {
+    const info = BALANCE_LABELS[value] || BALANCE_LABELS[50];
+    const el = $(labelId); if (el) el.textContent = info[0];
+    const hint = $(hintId); if (hint) hint.textContent = info[1];
+  }
+  function syncBalanceSliders(value) {
+    const lobby = $('battle-balance-lobby'); if (lobby) lobby.value = value;
+    const mid = $('battle-balance-mid'); if (mid) mid.value = value;
+    updateBalanceUI(value, 'balance-label-lobby', 'balance-hint-lobby');
+    updateBalanceUI(value, 'balance-label-mid', 'balance-hint-mid');
+  }
+  ['battle-balance-lobby', 'battle-balance-mid'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      const v = parseInt(el.value, 10);
+      syncBalanceSliders(v);
+      socket.emit('setBattleBalance', { value: v });
+    });
+  });
+
   // --- Main state handler
   socket.on('state', (state) => {
     lastState = state;
@@ -305,6 +340,7 @@
 
     // Sync TTS toggle from server
     updateTtsBtn(state.ttsEnabled !== false);
+    syncBalanceSliders(state.battleBalance ?? 50);
 
     if (state.waitingForNext) {
       // Mid-game joiner: show class/item pick if not ready, else watching screen

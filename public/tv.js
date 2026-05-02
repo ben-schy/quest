@@ -123,6 +123,25 @@
   }
 
   let lastNarration = '';
+  let scrollRaf = null;
+  function startAutoScroll(box) {
+    if (scrollRaf) cancelAnimationFrame(scrollRaf);
+    let last = null;
+    function step(ts) {
+      if (last === null) last = ts;
+      const elapsed = ts - last;
+      last = ts;
+      box.scrollTop += elapsed * 0.018; // ~18px/sec
+      if (box.scrollTop + box.clientHeight < box.scrollHeight - 2) {
+        scrollRaf = requestAnimationFrame(step);
+      } else {
+        scrollRaf = null;
+      }
+    }
+    // small delay before starting scroll so reader sees the top first
+    setTimeout(() => { scrollRaf = requestAnimationFrame(step); }, 2500);
+  }
+
   function setNarration(text) {
     if (text === lastNarration) return;
     lastNarration = text;
@@ -131,7 +150,9 @@
     void el.offsetWidth;
     el.textContent = text;
     el.classList.add('fade-in');
-    el.closest('.narration-box').scrollTop = 0;
+    const box = el.closest('.narration-box');
+    box.scrollTop = 0;
+    startAutoScroll(box);
     speak(text);
   }
 

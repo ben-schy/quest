@@ -92,23 +92,23 @@ body.tv .subtitle { font-size: 1.4em; }
 
 .play-main { flex: 1; display: grid; grid-template-columns: 3fr 2fr; gap: 20px; padding-top: 12px; min-height: 0; overflow: hidden; }
 .narration-box { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
-.narration { font-size: clamp(1.1rem, 1.95vw, 1.85rem); line-height: 1.5; flex: 1; min-height: 0; overflow: hidden; }
+.narration { font-size: clamp(0.95rem, 1.6vw, 1.55rem); line-height: 1.5; flex: 1; min-height: 0; overflow: hidden; }
 
-.party-panel { background: var(--panel); border-radius: 10px; padding: 10px 14px; overflow-y: auto; font-size: clamp(0.78rem, 0.88vw, 0.95rem); }
-.party-panel h3 { color: var(--gold); margin: 0 0 6px; font-size: 1.05em; }
-.party-card { padding: 6px 0; border-bottom: 1px solid var(--border); }
+.party-panel { background: var(--panel); border-radius: 10px; padding: 8px 12px; overflow-y: auto; font-size: clamp(0.72rem, 0.82vw, 0.88rem); }
+.party-panel h3 { color: var(--gold); margin: 0 0 4px; font-size: 1.05em; }
+.party-card { padding: 4px 0; border-bottom: 1px solid var(--border); }
 .party-card:last-child { border-bottom: none; }
 .party-card.dead { opacity: 0.5; }
 .party-card.waiting { border-left: 3px solid var(--gold); padding-left: 8px; }
 .party-card.chose { border-left: 3px solid var(--green); padding-left: 8px; }
 .party-card.disconnected { opacity: 0.7; }
-.party-card .class-line { color: var(--ink-dim); font-size: 0.88em; }
-.party-card .hp-bar { height: 6px; background: #2a2030; border-radius: 4px; margin-top: 5px; overflow: hidden; }
+.party-card .class-line { color: var(--ink-dim); font-size: 0.85em; }
+.party-card .hp-bar { height: 4px; background: #2a2030; border-radius: 4px; margin-top: 4px; overflow: hidden; }
 .party-card .hp-fill { height: 100%; background: linear-gradient(90deg, var(--red), var(--gold), var(--green)); transition: width 0.4s ease; }
-.party-card .hp-text { font-family: 'Courier New', monospace; color: var(--ink-dim); font-size: 0.82em; margin-top: 2px; }
-.party-card .items { color: var(--muted); font-size: 0.82em; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.party-card .status { color: var(--gold-bright); font-style: italic; font-size: 0.88em; margin-top: 2px; }
-.party-card .choice-state { color: var(--ink-dim); font-size: 0.82em; margin-top: 2px; }
+.party-card .hp-text { font-family: 'Courier New', monospace; color: var(--ink-dim); font-size: 0.8em; margin-top: 1px; }
+.party-card .items { color: var(--muted); font-size: 0.78em; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.party-card .status { color: var(--gold-bright); font-style: italic; font-size: 0.85em; margin-top: 1px; }
+.party-card .choice-state { color: var(--ink-dim); font-size: 0.78em; margin-top: 1px; }
 
 .play-footer { padding-top: 8px; border-top: 1px solid var(--border); font-size: 1.2em; flex-shrink: 0; }
 
@@ -153,6 +153,10 @@ textarea { resize: vertical; }
 .admin-controls textarea { width: 100%; }
 .admin-buttons { display: flex; gap: 10px; margin-top: 10px; }
 .admin-buttons button { flex: 1; }
+.balance-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.balance-label { font-size: 0.88em; color: var(--gold); white-space: nowrap; min-width: 90px; }
+.balance-hint { font-size: 0.8em; color: var(--ink-dim); margin-top: 2px; font-style: italic; }
+input[type="range"] { accent-color: var(--gold); cursor: pointer; }
 
 .lobby-roster { display: flex; flex-direction: column; gap: 8px; }
 .roster-row { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; position: relative; }

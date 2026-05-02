@@ -62,6 +62,12 @@
           <button id="add-bot" class="secondary" type="button">+ Add Bot</button>
           <button id="start-game" class="primary" type="button">Start Adventure</button>
         </div>
+        <label style="margin-top:14px;">Adventure ↔ Battle</label>
+        <div class="balance-row">
+          <span class="balance-label" id="balance-label-lobby">Balanced</span>
+          <input type="range" id="battle-balance-lobby" min="0" max="100" step="10" value="50" style="flex:1;">
+        </div>
+        <div class="balance-hint" id="balance-hint-lobby">Equal mix of exploration and combat</div>
       </div>
 
       <h3 class="section-title">Party</h3>
@@ -89,6 +95,13 @@
         <button id="kick-toggle" class="ghost" type="button">Manage party…</button>
         <div id="kick-panel" class="kick-panel hidden"></div>
         <button id="tts-admin-btn" class="ghost" type="button" style="margin-top:8px;">🔊 Narration: On</button>
+        <div style="margin-top:8px;">
+          <div class="balance-row">
+            <span class="balance-label" id="balance-label-mid">Balanced</span>
+            <input type="range" id="battle-balance-mid" min="0" max="100" step="10" value="50" style="flex:1;">
+          </div>
+          <div class="balance-hint" id="balance-hint-mid">Equal mix of exploration and combat</div>
+        </div>
       </div>
     </section>
 
