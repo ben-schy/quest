@@ -346,7 +346,7 @@ async function callClaude(userPrompt) {
   const t0 = Date.now();
   const response = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 2000,
+    max_tokens: 4000,
     system: [
       { type: 'text', text: buildSystemPrompt(), cache_control: { type: 'ephemeral' } },
     ],
