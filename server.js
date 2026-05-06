@@ -235,7 +235,7 @@ function buildSystemPrompt() {
 
 
 function describePlayers() {
-  return [...game.players.values()].filter(p => p.ready && !p.waitingForNext).map(p => {
+  return [...game.players.values()].filter(p => p.ready).map(p => {
     const alive = p.hp > 0 ? '' : ' [DEFEATED]';
     const stats = `STR ${p.stats.str}, DEX ${p.stats.dex}, INT ${p.stats.int}, CHA ${p.stats.cha}`;
     const items = p.items.length ? p.items.join(', ') : 'none';
@@ -299,11 +299,20 @@ Generate the OPENING scene and per-player options. The opening should hook the p
 
   const disconnectedNote = (() => {
     const away = [...game.players.values()].filter(
-      p => p.ready && !p.isBot && p.isAway && p.hp > 0 && !p.waitingForNext,
+      p => p.ready && !p.isBot && p.isAway && p.hp > 0,
     );
     if (!away.length) return '';
     const names = away.map(p => p.name).join(', ');
     return `\nNote: ${names} ${away.length === 1 ? 'has' : 'have'} gone quiet — their action was chosen automatically. Weave their distraction into the narrative.\n`;
+  })();
+
+  const newJoinerNote = (() => {
+    if (!game.newJoiners.size) return '';
+    const names = [...game.newJoiners].map(id => {
+      const p = game.players.get(id);
+      return p ? `${p.name} the ${p.type}` : null;
+    }).filter(Boolean).join(', ');
+    return names ? `\nNew arrivals: ${names} just joined the party — weave their entrance into the story.\n` : '';
   })();
 
   if (isFinalResolution) {
@@ -314,7 +323,7 @@ Recent history:
 ${describeHistory()}
 
 Current scene: ${game.currentNarration}
-${disconnectedNote}
+${disconnectedNote}${newJoinerNote}
 Player choices just made:
 ${actionLines}
 
@@ -331,7 +340,7 @@ Recent history:
 ${describeHistory()}
 
 Current scene: ${game.currentNarration}
-${disconnectedNote}
+${disconnectedNote}${newJoinerNote}
 Player choices just made:
 ${actionLines}
 
@@ -550,6 +559,7 @@ async function runClaude({ isOpening, isFinalResolution, actions }) {
           game.options.set(po.playerId, po.options.slice(0, 4));
         }
       }
+      game.newJoiners.clear();
     }
   } catch (e) {
     console.error('Claude error:', e);
@@ -565,6 +575,20 @@ async function runClaude({ isOpening, isFinalResolution, actions }) {
       }
     }
   }
+}
+
+function checkAllGone() {
+  if (game.phase !== 'playing') return;
+  const humans = [...game.players.values()].filter(p => !p.isBot && p.ready);
+  if (!humans.length) return;
+  if (humans.some(p => p.connected)) return;
+  console.log('[Game]   all players gone — resetting to empty lobby');
+  clearBotTimers();
+  clearAllInactivityTimers();
+  game.players.clear();
+  tokens.clear();
+  resetGameState();
+  broadcast();
 }
 
 function endGameEarly() {
@@ -650,7 +674,7 @@ io.on('connection', (socket) => {
       }
     }
 
-    // --- New join ---
+    // --- New join / same-name takeover ---
     const trimmed = String(name || '').trim().slice(0, 24);
     if (!trimmed) { socket.emit('joinError', { message: 'Please enter a name.' }); return; }
 
@@ -658,11 +682,30 @@ io.on('connection', (socket) => {
       p => p.name.toLowerCase() === trimmed.toLowerCase(),
     );
     if (dup) {
+      // Allow takeover of an away/disconnected player during a game
+      if (!dup.isBot && !dup.connected && game.phase === 'playing') {
+        if (dup.socketId) {
+          const old = io.sockets.sockets.get(dup.socketId);
+          if (old) old.disconnect(true);
+        }
+        dup.socketId = socket.id;
+        dup.connected = true;
+        dup.isAway = false;
+        socket.data.playerId = dup.id;
+        clearInactivityTimer(dup.id);
+        scheduleInactivity(dup.id);
+        const tok = newToken();
+        tokens.set(tok, dup.id);
+        reassignAdmin();
+        socket.emit('joined', { playerId: dup.id, token: tok, isAdmin: dup.isAdmin });
+        socket.emit('state', snapshotForPlayer(dup.id));
+        broadcast();
+        return;
+      }
       socket.emit('joinError', { message: 'That name is taken.' });
       return;
     }
 
-    const waitingForNext = game.phase !== 'lobby';
     const id = newId();
     const tok = newToken();
     const player = {
@@ -673,9 +716,10 @@ io.on('connection', (socket) => {
       isBot: false,
       connected: true,
       ready: false,
-      waitingForNext,
+      waitingForNext: false,
       type: null,
       hp: 0, maxHp: 0, stats: {}, items: [], statusNote: '',
+      isAway: false,
     };
     game.players.set(id, player);
     tokens.set(tok, id);
@@ -692,24 +736,27 @@ io.on('connection', (socket) => {
     const player = id ? game.players.get(id) : null;
     if (!player) return;
     clearInactivityTimer(id);
-    // Revoke token so they start fresh next time
+    // Revoke token — they can rejoin by name
     for (const [tok, pid] of tokens.entries()) {
       if (pid === id) { tokens.delete(tok); break; }
     }
-    if (game.phase === 'lobby' || player.waitingForNext) {
+    if (game.phase === 'lobby') {
       game.players.delete(id);
     } else if (game.phase === 'playing') {
-      // Treat as fallen so Claude narrates the departure
-      player.hp = 0;
-      player.statusNote = 'left the party';
+      // Keep in story — mark away and auto-pick so round isn't blocked
+      player.isAway = true;
+      player.connected = false;
+      player.socketId = null;
       if (!game.choices.has(id) && game.options.has(id)) {
-        submitChoice(id, 0); // auto-submit so the round can resolve
+        const opts = game.options.get(id);
+        submitChoice(id, Math.floor(Math.random() * opts.length));
       }
     }
     socket.data.playerId = null;
     socket.emit('left');
     reassignAdmin();
     broadcast();
+    if (game.phase === 'playing') checkAllGone();
   });
 
   socket.on('selectCharacter', ({ type } = {}) => {
@@ -732,7 +779,17 @@ io.on('connection', (socket) => {
     if (chosen.length < 2) return;
     player.items = chosen;
     player.ready = true;
-    scheduleInactivity(id); // reset — they just finished setup
+    scheduleInactivity(id);
+
+    if (game.phase === 'playing') {
+      // Register as a new joiner so Claude weaves them in next round
+      game.newJoiners.add(id);
+      // If a round is actively collecting choices, auto-submit so we don't block it
+      if (!game.isProcessing && game.options.size > 0) {
+        game.options.set(id, ['Follow the party\'s lead']);
+        submitChoice(id, 0);
+      }
+    }
     broadcast();
   });
 
@@ -774,21 +831,35 @@ io.on('connection', (socket) => {
     if (playerId === admin.id) return;
     const target = game.players.get(playerId);
     if (!target) return;
+    // Disconnect socket and revoke token
     if (!target.isBot && target.socketId) {
       const s = io.sockets.sockets.get(target.socketId);
       if (s) { s.emit('kicked'); s.disconnect(true); }
     }
-    // Revoke token
     for (const [tok, pid] of tokens.entries()) {
       if (pid === playerId) { tokens.delete(tok); break; }
     }
     clearInactivityTimer(playerId);
-    game.players.delete(playerId);
-    game.options.delete(playerId);
-    game.choices.delete(playerId);
+    if (game.phase === 'playing' && !target.isBot) {
+      // Keep in story as ghost — auto-pick and mark away
+      target.isAway = true;
+      target.connected = false;
+      target.socketId = null;
+      if (!game.choices.has(playerId) && game.options.has(playerId)) {
+        const opts = game.options.get(playerId);
+        submitChoice(playerId, Math.floor(Math.random() * opts.length));
+      } else {
+        maybeResolveRound();
+      }
+    } else {
+      game.players.delete(playerId);
+      game.options.delete(playerId);
+      game.choices.delete(playerId);
+      if (game.phase === 'playing') maybeResolveRound();
+    }
     reassignAdmin();
     broadcast();
-    if (game.phase === 'playing') maybeResolveRound();
+    if (game.phase === 'playing') checkAllGone();
   });
 
   socket.on('submitChoice', ({ index } = {}) => {
@@ -836,12 +907,11 @@ io.on('connection', (socket) => {
     if (!id) return;
     const player = game.players.get(id);
     if (!player) return;
-    // Just mark disconnected — inactivity timer is already running and handles
-    // auto-pick (2 min, playing) and removal (10 min, lobby) independently.
     player.connected = false;
     player.socketId = null;
     reassignAdmin();
     broadcast();
+    checkAllGone();
   });
 });
 

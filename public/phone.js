@@ -359,29 +359,6 @@
     updateTtsBtn(state.ttsEnabled !== false);
     syncBalanceSliders(state.battleBalance ?? 50);
 
-    if (state.waitingForNext) {
-      // Mid-game joiner: show class/item pick if not ready, else watching screen
-      if (!state.self || !state.self.ready) {
-        if (state.self && state.self.type && state.itemPool && state.itemPool.length) {
-          $('item-pick-title').textContent = `${classIcon(state.self.type)} — Choose your gear`;
-          renderItemPicker(state);
-          show('itemPick');
-        } else {
-          renderClassGrid();
-          show('classPick');
-        }
-      } else {
-        show('watching');
-        $('watching-round').textContent = state.round;
-        $('watching-max').textContent = state.maxRounds;
-        $('watching-title').textContent = state.currentTitle || '';
-        const narr = state.currentNarration || '';
-        $('watching-narration').textContent = narr;
-        $('watching-narration').classList.toggle('hidden', !narr);
-      }
-      return;
-    }
-
     if (state.phase === 'lobby') {
       if (!state.self) { show('join'); return; }
       if (!state.self.ready) {
@@ -404,6 +381,18 @@
         ? 'You can start whenever you\u2019re ready.'
         : (adminPresent ? 'Waiting for the admin to start the campaign\u2026' : 'Waiting for an admin to join\u2026');
     } else if (state.phase === 'playing') {
+      // Mid-game joiner still picking class/items
+      if (state.self && !state.self.ready) {
+        if (state.self.type && state.itemPool && state.itemPool.length) {
+          $('item-pick-title').textContent = `${classIcon(state.self.type)} — Choose your gear`;
+          renderItemPicker(state);
+          show('itemPick');
+        } else {
+          renderClassGrid();
+          show('classPick');
+        }
+        return;
+      }
       if (state.round !== Number($('ph-round').textContent)) lastSelectedIdx = null;
       if (!state.hasChosen) lastSelectedIdx = null;
       show('play');
