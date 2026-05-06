@@ -94,6 +94,23 @@
     document.body.innerHTML = '<div style="padding:2em;color:#fff;font-family:sans-serif"><h2>You were removed from the party.</h2><p>Refresh to rejoin.</p></div>';
   });
 
+  socket.on('left', () => {
+    clearSession();
+    show('join');
+    $('join-error').textContent = '';
+    myId = null; isAdmin = false;
+  });
+
+  function confirmLeave(msg) {
+    return confirm(msg || 'Leave the game?');
+  }
+  $('leave-lobby-btn').addEventListener('click', () => {
+    if (confirmLeave('Leave the lobby?')) socket.emit('leaveGame');
+  });
+  $('leave-game-btn').addEventListener('click', () => {
+    if (confirmLeave('Leave the adventure? Your character will be removed from the story.')) socket.emit('leaveGame');
+  });
+
   function renderClassGrid() {
     const grid = $('class-grid');
     grid.innerHTML = '';
@@ -397,6 +414,8 @@
       $('ph-narration').textContent = narration;
       $('ph-narration').classList.toggle('hidden', !narration);
       $('ph-processing').classList.toggle('hidden', !state.isProcessing);
+      const isAway = !!(state.self && state.self.isAway);
+      $('ph-away-banner').classList.toggle('hidden', !isAway);
       renderSelfStatus(state.self);
       renderOptions(state);
       renderWaiting(state);

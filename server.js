@@ -111,7 +111,7 @@ function getLocalIP() {
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' }, pingTimeout: 60000, pingInterval: 25000 });
+const io = new Server(server, { cors: { origin: '*' }, pingTimeout: 30000, pingInterval: 25000 });
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'tv.html')));
@@ -299,11 +299,11 @@ Generate the OPENING scene and per-player options. The opening should hook the p
 
   const disconnectedNote = (() => {
     const away = [...game.players.values()].filter(
-      p => p.ready && !p.isBot && !p.connected && p.hp > 0 && !p.waitingForNext,
+      p => p.ready && !p.isBot && p.isAway && p.hp > 0 && !p.waitingForNext,
     );
     if (!away.length) return '';
     const names = away.map(p => p.name).join(', ');
-    return `\nNote: ${names} ${away.length === 1 ? 'has' : 'have'} gone mysteriously silent — their action was chosen automatically. Weave their distraction or struggle into the narrative naturally.\n`;
+    return `\nNote: ${names} ${away.length === 1 ? 'has' : 'have'} gone quiet — their action was chosen automatically. Weave their distraction into the narrative.\n`;
   })();
 
   if (isFinalResolution) {
@@ -376,64 +376,60 @@ async function callClaude(userPrompt) {
 
 // --- Auto-pick timers (for disconnected players) ----------------------------
 
-const autoPickTimers = new Map(); // playerId -> timeoutHandle
+// --- Unified inactivity timers -----------------------------------------------
+// Lobby:   10 min of inactivity → remove player
+// Playing: 2 min without submitting a choice → mark isAway + auto-pick
 
-// --- Lobby grace-period timers (15 min before removing a disconnected player) -
-const lobbyGraceTimers = new Map(); // playerId -> timeoutHandle
-const LOBBY_GRACE_MS = 15 * 60 * 1000;
+const inactivityTimers = new Map(); // playerId -> timeoutHandle
+const LOBBY_INACTIVITY_MS  = 10 * 60 * 1000;
+const GAME_INACTIVITY_MS   =  2 * 60 * 1000;
 
-function clearLobbyGrace(id) {
-  const t = lobbyGraceTimers.get(id);
-  if (t) { clearTimeout(t); lobbyGraceTimers.delete(id); }
+function clearInactivityTimer(id) {
+  const t = inactivityTimers.get(id);
+  if (t) { clearTimeout(t); inactivityTimers.delete(id); }
 }
 
-function scheduleLobbyGrace(id) {
-  clearLobbyGrace(id);
+function clearAllInactivityTimers() {
+  for (const t of inactivityTimers.values()) clearTimeout(t);
+  inactivityTimers.clear();
+}
+
+function scheduleInactivity(id) {
+  clearInactivityTimer(id);
+  const player = game.players.get(id);
+  if (!player || player.isBot) return;
+
+  const isLobby = game.phase === 'lobby' || player.waitingForNext;
+  const ms = isLobby ? LOBBY_INACTIVITY_MS : GAME_INACTIVITY_MS;
+
   const handle = setTimeout(() => {
-    lobbyGraceTimers.delete(id);
-    const player = game.players.get(id);
-    if (!player) return;
-    for (const [tok, pid] of tokens.entries()) {
-      if (pid === id) { tokens.delete(tok); break; }
+    inactivityTimers.delete(id);
+    const p = game.players.get(id);
+    if (!p) return;
+
+    if (game.phase === 'lobby' || p.waitingForNext) {
+      // Remove idle lobby player
+      for (const [tok, pid] of tokens.entries()) {
+        if (pid === id) { tokens.delete(tok); break; }
+      }
+      game.players.delete(id);
+      reassignAdmin();
+      broadcast();
+      console.log(`[Lobby]  inactivity timeout — removed ${p.name}`);
+    } else if (game.phase === 'playing' && !game.isProcessing) {
+      // Mark away and auto-pick if they haven't chosen
+      p.isAway = true;
+      broadcast();
+      if (!game.choices.has(id) && game.options.has(id)) {
+        const opts = game.options.get(id);
+        const idx = Math.floor(Math.random() * opts.length);
+        console.log(`[Game]   inactivity — auto-picking for ${p.name}`);
+        submitChoice(id, idx);
+      }
     }
-    game.players.delete(id);
-    reassignAdmin();
-    broadcast();
-    console.log(`[Lobby]  grace expired, removed player ${id}`);
-  }, LOBBY_GRACE_MS);
-  lobbyGraceTimers.set(id, handle);
-}
+  }, ms);
 
-function clearAutoPickForPlayer(id) {
-  const t = autoPickTimers.get(id);
-  if (t) { clearTimeout(t); autoPickTimers.delete(id); }
-}
-
-function clearAllAutoPickTimers() {
-  for (const t of autoPickTimers.values()) clearTimeout(t);
-  autoPickTimers.clear();
-}
-
-function scheduleAutoPickForPlayer(id) {
-  clearAutoPickForPlayer(id);
-  const handle = setTimeout(() => {
-    if (game.phase !== 'playing' || game.isProcessing) return;
-    if (game.choices.has(id)) return;
-    const opts = game.options.get(id);
-    if (!opts || !opts.length) return;
-    const idx = Math.floor(Math.random() * opts.length);
-    submitChoice(id, idx);
-  }, 30000);
-  autoPickTimers.set(id, handle);
-}
-
-function scheduleAutoPicksForDisconnected() {
-  for (const p of game.players.values()) {
-    if (p.isBot || p.connected) continue;
-    if (game.choices.has(p.id)) continue;
-    if (!game.options.has(p.id)) continue;
-    scheduleAutoPickForPlayer(p.id);
-  }
+  inactivityTimers.set(id, handle);
 }
 
 // --- Bot timers -------------------------------------------------------------
@@ -471,6 +467,9 @@ function submitChoice(playerId, index) {
   const opts = game.options.get(playerId);
   if (!opts || index < 0 || index >= opts.length) return;
   if (game.choices.has(playerId)) return;
+  clearInactivityTimer(playerId);
+  const p = game.players.get(playerId);
+  if (p) p.isAway = false;
   game.choices.set(playerId, { index, text: opts[index] });
   broadcast();
   maybeResolveRound();
@@ -487,7 +486,7 @@ function maybeResolveRound() {
 
 async function resolveRound() {
   clearBotTimers();
-  clearAllAutoPickTimers();
+  clearAllInactivityTimers();
   const actions = [...game.choices.entries()].map(([pid, c]) => {
     const p = game.players.get(pid);
     return { playerId: pid, name: p ? p.name : '?', optionText: c.text, optionIndex: c.index };
@@ -540,6 +539,10 @@ async function runClaude({ isOpening, isFinalResolution, actions }) {
     } else {
       game.options.clear();
       game.choices.clear();
+      // Clear away state for connected players entering the new round
+      for (const p of game.players.values()) {
+        if (p.connected || p.isBot) p.isAway = false;
+      }
       for (const po of result.playerOptions || []) {
         const p = game.players.get(po.playerId);
         if (!p || p.hp <= 0) continue;
@@ -556,7 +559,10 @@ async function runClaude({ isOpening, isFinalResolution, actions }) {
     broadcast();
     if (game.phase === 'playing') {
       scheduleBotChoices();
-      scheduleAutoPicksForDisconnected();
+      // Start inactivity timers for every player who has options and hasn't chosen
+      for (const [pid] of game.options) {
+        if (!game.choices.has(pid)) scheduleInactivity(pid);
+      }
     }
   }
 }
@@ -568,14 +574,14 @@ function endGameEarly() {
   game.options.clear();
   game.choices.clear();
   clearBotTimers();
-  clearAllAutoPickTimers();
+  clearAllInactivityTimers();
   saveQuestSummary();
   broadcast();
 }
 
 function resetToLobby() {
   clearBotTimers();
-  clearAllAutoPickTimers();
+  clearAllInactivityTimers();
 
   // Before reset: capture survivors' items and note who died
   const survivorItems = new Map();
@@ -632,9 +638,10 @@ io.on('connection', (socket) => {
         }
         existing.socketId = socket.id;
         existing.connected = true;
+        existing.isAway = false;
         socket.data.playerId = existing.id;
-        clearAutoPickForPlayer(existing.id);
-        clearLobbyGrace(existing.id);
+        clearInactivityTimer(existing.id);
+        scheduleInactivity(existing.id); // reset their inactivity window
         reassignAdmin();
         socket.emit('joined', { playerId: existing.id, token, isAdmin: existing.isAdmin });
         socket.emit('state', snapshotForPlayer(existing.id));
@@ -674,8 +681,34 @@ io.on('connection', (socket) => {
     tokens.set(tok, id);
     socket.data.playerId = id;
     reassignAdmin();
+    scheduleInactivity(id); // start lobby inactivity timer
     socket.emit('joined', { playerId: id, token: tok, isAdmin: player.isAdmin });
     socket.emit('state', snapshotForPlayer(id));
+    broadcast();
+  });
+
+  socket.on('leaveGame', () => {
+    const id = socket.data.playerId;
+    const player = id ? game.players.get(id) : null;
+    if (!player) return;
+    clearInactivityTimer(id);
+    // Revoke token so they start fresh next time
+    for (const [tok, pid] of tokens.entries()) {
+      if (pid === id) { tokens.delete(tok); break; }
+    }
+    if (game.phase === 'lobby' || player.waitingForNext) {
+      game.players.delete(id);
+    } else if (game.phase === 'playing') {
+      // Treat as fallen so Claude narrates the departure
+      player.hp = 0;
+      player.statusNote = 'left the party';
+      if (!game.choices.has(id) && game.options.has(id)) {
+        submitChoice(id, 0); // auto-submit so the round can resolve
+      }
+    }
+    socket.data.playerId = null;
+    socket.emit('left');
+    reassignAdmin();
     broadcast();
   });
 
@@ -685,8 +718,8 @@ io.on('connection', (socket) => {
     if (!player) return;
     if (!CHARACTERS[type]) return;
     if (player.ready) return;
-    // Assign class stats but NOT ready — player must still pick 2 items
     Object.assign(player, rollCharacter(type));
+    scheduleInactivity(id); // reset inactivity — they're actively picking
     broadcast();
   });
 
@@ -699,6 +732,7 @@ io.on('connection', (socket) => {
     if (chosen.length < 2) return;
     player.items = chosen;
     player.ready = true;
+    scheduleInactivity(id); // reset — they just finished setup
     broadcast();
   });
 
@@ -706,6 +740,7 @@ io.on('connection', (socket) => {
     const id = socket.data.playerId;
     const player = id ? game.players.get(id) : null;
     if (!player || !player.isAdmin) return;
+    clearAllInactivityTimers(); // game starting — timers restart via runClaude
     startGame(prompt, maxRounds);
   });
 
@@ -747,8 +782,7 @@ io.on('connection', (socket) => {
     for (const [tok, pid] of tokens.entries()) {
       if (pid === playerId) { tokens.delete(tok); break; }
     }
-    clearAutoPickForPlayer(playerId);
-    clearLobbyGrace(playerId);
+    clearInactivityTimer(playerId);
     game.players.delete(playerId);
     game.options.delete(playerId);
     game.choices.delete(playerId);
@@ -802,18 +836,10 @@ io.on('connection', (socket) => {
     if (!id) return;
     const player = game.players.get(id);
     if (!player) return;
-    if (game.phase === 'lobby' || player.waitingForNext) {
-      // Keep player (and token) for 15 min so they can reconnect; remove after grace period
-      player.connected = false;
-      player.socketId = null;
-      scheduleLobbyGrace(id);
-    } else {
-      player.connected = false;
-      player.socketId = null;
-      if (game.phase === 'playing' && !game.choices.has(id) && game.options.has(id)) {
-        scheduleAutoPickForPlayer(id);
-      }
-    }
+    // Just mark disconnected — inactivity timer is already running and handles
+    // auto-pick (2 min, playing) and removal (10 min, lobby) independently.
+    player.connected = false;
+    player.socketId = null;
     reassignAdmin();
     broadcast();
   });

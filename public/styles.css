@@ -47,6 +47,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 .admin-badge { background: var(--gold); color: #14110a; }
 .bot-badge { background: var(--blue); color: #fff; }
 .me-badge { background: var(--green); color: #14110a; }
+.away-badge { background: var(--gold); color: #14110a; }
 .dead-badge { background: var(--red); color: #fff; }
 .disconnected-badge { background: var(--muted); color: #fff; }
 
@@ -187,6 +188,9 @@ input[type="range"] { accent-color: var(--gold); cursor: pointer; }
 .defeated { text-align: center; padding: 20px; color: var(--red); font-style: italic; background: var(--panel); border-radius: 10px; }
 
 .admin-mid { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border); }
+.leave-btn { background: transparent; color: var(--ink-dim); border: 1px solid var(--border); border-radius: 8px; padding: 8px 18px; font-size: 0.9em; cursor: pointer; margin-top: 12px; }
+.leave-btn:hover { border-color: var(--red); color: var(--red); }
+.away-banner { background: var(--panel); border-left: 3px solid var(--gold); color: var(--gold); padding: 10px 14px; border-radius: 6px; font-size: 0.9em; margin-bottom: 10px; }
 .kick-panel { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .kick-row { display: flex; justify-content: space-between; align-items: center; background: var(--panel); padding: 8px 10px; border-radius: 6px; }
 .kick-row .kick-btn { position: static; }

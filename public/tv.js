@@ -91,6 +91,7 @@
       const waiting = phase === 'playing' && pending.has(p.id) && !dead;
       const hpPct = p.maxHp ? Math.max(0, Math.min(100, (p.hp / p.maxHp) * 100)) : 0;
       const disconnected = !p.connected && !p.isBot;
+      const away = !!p.isAway && !p.isBot;
       const card = document.createElement('div');
       card.className = 'party-card' + (dead ? ' dead' : '') + (waiting ? ' waiting' : ' chose') + (disconnected ? ' disconnected' : '');
       card.innerHTML = `
@@ -99,7 +100,7 @@
           <span class="name">${escapeHtml(p.name)}</span>
           ${p.isBot ? '<span class="badge bot-badge">bot</span>' : ''}
           ${dead ? '<span class="badge dead-badge">defeated</span>' : ''}
-          ${disconnected ? '<span class="badge disconnected-badge">away</span>' : ''}
+          ${away ? '<span class="badge away-badge">away</span>' : (disconnected ? '<span class="badge disconnected-badge">disconnected</span>' : '')}
         </div>
         <div class="class-line">${p.type}</div>
         <div class="hp-bar"><div class="hp-fill" style="width:${hpPct}%"></div></div>
