@@ -113,7 +113,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' }, pingTimeout: 30000, pingInterval: 25000 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'tv.html')));
 app.get('/tv', (_req, res) => res.redirect('/'));
 app.get('/phone', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
